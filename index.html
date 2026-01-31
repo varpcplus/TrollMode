@@ -2,595 +2,688 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>TrollMode - Triggerbot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TrollMode Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
+            font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
         }
         
         body {
-            background: linear-gradient(180deg, #0a1628 0%, #020617 50%, #000000 100%);
-            color: #ffffff;
+            background: #050505;
+            color: #f8fafc;
             min-height: 100vh;
-            padding: 20px 16px 40px;
-            overflow-x: hidden;
         }
-        
-        body::before {
-            content: '';
+
+        .grid-bg {
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
             position: fixed;
-            top: -30%;
-            left: -50%;
-            width: 200%;
-            height: 100%;
-            background: radial-gradient(circle at 50% 0%, rgba(59, 130, 246, 0.12) 0%, transparent 60%);
-            pointer-events: none;
-            z-index: -1;
-        }
-        
-        .glass {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(20px) saturate(180%);
-            -webkit-backdrop-filter: blur(20px) saturate(180%);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            box-shadow: 
-                0 8px 32px 0 rgba(0, 0, 0, 0.4),
-                inset 0 1px 0 rgba(255, 255, 255, 0.1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .glass::before {
-            content: '';
-            position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        }
-        
-        .glass-shine {
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+            bottom: 0;
             pointer-events: none;
+            z-index: 1;
         }
-        
-        /* Header - без иконки */
-        .header {
-            margin-bottom: 24px;
-            padding-top: 8px;
+
+        .glow-bg {
+            position: fixed;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(255, 107, 157, 0.12) 0%, transparent 60%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 0;
         }
-        
-        .logo-text-main {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: -1px;
-            line-height: 1;
-            margin-bottom: 4px;
-            background: linear-gradient(135deg, #fff 0%, #60a5fa 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+
+        .glass-panel {
+            background: rgba(20, 20, 20, 0.6);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
-        
-        .logo-text-sub {
-            font-size: 18px;
-            font-weight: 600;
-            color: rgba(96, 165, 250, 0.9);
-            letter-spacing: 0.5px;
+
+        .view {
+            position: fixed;
+            inset: 0;
+            overflow-y: auto;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            z-index: 10;
+            background: transparent;
         }
-        
-        /* Main Card */
-        .main-card {
-            border-radius: 24px;
-            padding: 20px;
-            margin-bottom: 16px;
+
+        .view.active {
+            opacity: 1;
+            pointer-events: all;
         }
-        
-        .card-header {
+
+        .auth-container {
+            min-height: 100vh;
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 16px;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            z-index: 10;
         }
-        
-        .badge {
+
+        .auth-box {
+            width: 100%;
+            max-width: 440px;
+            animation: slideUp 0.5s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .auth-input {
+            width: 100%;
+            padding: 14px 18px;
+            background: rgba(255, 107, 157, 0.05);
+            border: 2px solid rgba(255, 107, 157, 0.1);
+            border-radius: 12px;
+            color: #f8fafc;
+            outline: none;
+            font-size: 15px;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+
+        .auth-input:focus {
+            border-color: #ff6b9d;
+            box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
+        }
+
+        .auth-btn {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #ff6b9d, #c44569);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .auth-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 107, 157, 0.4);
+        }
+
+        .auth-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .tab-btn {
+            padding: 12px 32px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-weight: 600;
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            font-size: 15px;
+        }
+
+        .tab-btn.active {
+            color: #ff6b9d;
+            border-bottom-color: #ff6b9d;
+        }
+
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .message.show {
+            display: flex;
+        }
+
+        .message-error {
+            background: rgba(239, 68, 68, 0.1);
+            border-left: 4px solid #ef4444;
+            color: #ef4444;
+        }
+
+        .message-success {
+            background: rgba(34, 197, 94, 0.1);
+            border-left: 4px solid #22c55e;
+            color: #22c55e;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .custom-checkbox {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            background: rgba(255, 107, 157, 0.1);
+            border: 2px solid rgba(255, 107, 157, 0.3);
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .custom-checkbox:checked {
+            background: linear-gradient(135deg, #ff6b9d, #c44569);
+            border-color: transparent;
+        }
+
+        .custom-checkbox:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 13px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: bold;
+        }
+
+        .module-card {
+            background: rgba(20, 20, 20, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .module-card:hover {
+            border-color: #ff6b9d;
+            transform: translateX(4px);
+        }
+
+        .module-card.active {
+            border-color: #ff6b9d;
+            background: rgba(255, 107, 157, 0.08);
+        }
+
+        .user-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 16px;
+            background: rgba(255, 107, 157, 0.1);
+            border-radius: 50px;
+            border: 1px solid rgba(255, 107, 157, 0.2);
+            font-weight: 600;
+            margin-left: 16px;
+        }
+
+        .logout-btn {
+            font-size: 12px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .logout-btn:hover {
+            color: #ef4444;
+        }
+
+        .price-tag {
+            font-size: 20px;
+            font-weight: 700;
+            color: #ff6b9d;
+        }
+
+        .status-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(74, 222, 128, 0.08);
-            color: #4ade80;
             padding: 6px 12px;
+            background: rgba(34, 197, 94, 0.1);
+            color: #22c55e;
             border-radius: 20px;
             font-size: 13px;
             font-weight: 600;
-            border: 1px solid rgba(74, 222, 128, 0.2);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 0 20px rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.2);
         }
-        
-        .badge-dot {
+
+        .status-dot {
             width: 6px;
             height: 6px;
-            background: #4ade80;
+            background: #22c55e;
             border-radius: 50%;
-            box-shadow: 0 0 10px #4ade80;
             animation: pulse 2s infinite;
         }
-        
+
         @keyframes pulse {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        
-        .main-title {
-            font-size: 24px;
-            font-weight: 700;
-            line-height: 1.2;
-            margin-bottom: 4px;
-        }
-        
-        .subtitle {
-            color: rgba(148, 163, 184, 0.7);
-            font-size: 15px;
-            font-weight: 500;
-            margin-bottom: 16px;
-        }
-        
-        .description {
-            color: rgba(148, 163, 184, 0.8);
-            font-size: 14px;
-            line-height: 1.5;
-            margin-bottom: 20px;
-        }
-        
-        /* Tags */
-        .tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 8px 14px;
-            border-radius: 12px;
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-        }
-        
-        .tag svg {
-            width: 14px;
-            height: 14px;
-            opacity: 0.9;
-        }
-        
-        /* Info */
-        .info-grid {
-            padding-top: 16px;
-            border-top: 1px solid rgba(255, 255, 255, 0.06);
-        }
-        
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-        }
-        
-        .info-label {
-            color: rgba(148, 163, 184, 0.6);
-        }
-        
-        .info-value {
-            color: #e2e8f0;
-            font-weight: 500;
-        }
-        
-        /* Section Label */
-        .section-label {
-            color: rgba(148, 163, 184, 0.5);
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            margin-bottom: 10px;
-            padding-left: 4px;
-        }
-        
-        /* Forever Card */
-        .forever-card {
-            border-radius: 24px;
-            padding: 32px 20px;
-            text-align: center;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(14, 165, 233, 0.05) 100%);
-            border: 1px solid rgba(59, 130, 246, 0.2);
-        }
-        
-        .infinity {
-            font-size: 64px;
-            line-height: 1;
-            margin-bottom: 12px;
-            background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 50%, #2563eb 100%);
+
+        .gradient-text {
+            background: linear-gradient(135deg, #ff6b9d, #c44569);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            font-weight: 300;
-            text-shadow: 0 0 30px rgba(59, 130, 246, 0.3);
         }
-        
-        .forever-label {
-            font-size: 17px;
-            font-weight: 600;
-            color: #e2e8f0;
-            margin-bottom: 8px;
-        }
-        
-        .forever-price {
-            font-size: 32px;
-            font-weight: 800;
-            color: #ffffff;
-            margin-bottom: 4px;
-        }
-        
-        .forever-period {
-            font-size: 14px;
-            color: rgba(148, 163, 184, 0.8);
-            font-weight: 500;
-            text-align: center;
-            letter-spacing: 0.5px;
-        }
-        
-        /* Extras */
-        .extras-card {
-            border-radius: 20px;
-            padding: 8px;
-            margin-bottom: 24px;
-        }
-        
-        .extra-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 16px;
-            border-radius: 16px;
+
+        .support-card {
             cursor: pointer;
-            transition: all 0.3s;
-            border: 1px solid transparent;
-        }
-        
-        .extra-item:active {
-            transform: scale(0.99);
-            background: rgba(255, 255, 255, 0.03);
-        }
-        
-        .extra-item.selected {
-            background: rgba(59, 130, 246, 0.08);
-            border: 1px solid rgba(59, 130, 246, 0.25);
-        }
-        
-        .extra-checkbox {
-            width: 24px;
-            height: 24px;
-            border-radius: 8px;
-            border: 2px solid rgba(255, 255, 255, 0.15);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
             transition: all 0.2s;
         }
-        
-        .extra-item.selected .extra-checkbox {
-            background: #3b82f6;
-            border-color: #3b82f6;
-            box-shadow: 0 0 12px rgba(59, 130, 246, 0.4);
+
+        .support-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 107, 157, 0.2);
         }
-        
-        .extra-item.selected .extra-checkbox::after {
-            content: '';
-            width: 5px;
-            height: 9px;
-            border: solid white;
-            border-width: 0 2px 2px 0;
-            transform: rotate(45deg) translate(-1px, -1px);
-        }
-        
-        .extra-info {
-            flex: 1;
-        }
-        
-        .extra-title {
-            font-size: 15px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #f1f5f9;
-        }
-        
-        .extra-badge {
-            font-size: 11px;
-            color: #60a5fa;
-            font-weight: 700;
-            background: rgba(59, 130, 246, 0.15);
-            padding: 2px 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(59, 130, 246, 0.2);
-        }
-        
-        .extra-desc {
-            font-size: 13px;
-            color: rgba(148, 163, 184, 0.7);
-            line-height: 1.3;
-        }
-        
-        /* Purchase Section with Button */
-        .purchase-section {
-            padding: 8px 0 20px;
-        }
-        
-        .total-line {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-            padding: 0 4px;
-        }
-        
-        .total-text {
-            font-size: 14px;
-            color: rgba(148, 163, 184, 0.7);
-        }
-        
-        .total-amount {
-            font-size: 28px;
-            font-weight: 800;
-            color: #ffffff;
-            text-shadow: 0 0 20px rgba(96, 165, 250, 0.3);
-        }
-        
-        .buy-btn {
-            width: 100%;
-            padding: 18px;
-            background: linear-gradient(135deg, #3b82f6 0%, #0ea5e9 100%);
-            border: none;
-            border-radius: 16px;
-            color: #ffffff;
-            font-size: 17px;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255,255,255,0.2);
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .buy-btn:active {
-            transform: scale(0.98);
-            box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3);
-        }
-        
-        .buy-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.6s;
-        }
-        
-        .buy-btn:hover::before {
-            left: 100%;
+
+        .logo-text {
+            margin-right: 20px;
         }
     </style>
 </head>
 <body>
-    <!-- Header - только текст, без иконки -->
-    <div class="header">
-        <div class="logo-text-main">TrollMode</div>
-        <div class="logo-text-sub">Triggerbot</div>
-    </div>
-    
-    <!-- Main Card -->
-    <div class="glass main-card">
-        <div class="glass-shine"></div>
-        <div class="card-header">
-            <div>
-                <h1 class="main-title">Triggerbot</h1>
-                <div class="subtitle">Оформление подписки</div>
-            </div>
-            <div class="badge">
-                <span class="badge-dot"></span>
-                <span>Undetected</span>
-            </div>
-        </div>
-        
-        <p class="description">
-            Точный, стабильный и быстрый инструмент с акцентом на плавность и безопасность.
-        </p>
-        
-        <div class="tags">
-            <div class="tag">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 2a10 10 0 1 0 10 10H12V2z"></path>
-                    <path d="M12 12L2.5 12"></path>
-                </svg>
-                Низкая задержка
-            </div>
-            <div class="tag">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                Приватность
-            </div>
-            <div class="tag">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="12" y1="2" x2="12" y2="22"></line>
-                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                    <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
-                </svg>
-                Прецизионность
-            </div>
-        </div>
-        
-        <div class="info-grid">
-            <div class="info-row">
-                <span class="info-label">Последнее обновление</span>
-                <span class="info-value">01.01.2026</span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Forever -->
-    <div class="section-label">Тариф</div>
-    <div class="glass forever-card">
-        <div class="glass-shine"></div>
-        
-        <div class="infinity">∞</div>
-        
-        <div class="forever-label">Доступ навсегда</div>
-        <div class="forever-price">$3</div>
-        <div class="forever-period">единоразово</div>
-    </div>
-    
-    <!-- Extras -->
-    <div class="section-label">Дополнительные модули</div>
-    <div class="glass extras-card">
-        <div class="glass-shine"></div>
-        
-        <div class="extra-item" onclick="toggleExtra('visuals', 2)">
-            <div class="extra-checkbox" id="check-visuals"></div>
-            <div class="extra-info">
-                <div class="extra-title">
-                    Визуалы (ESP)
-                    <span class="extra-badge">+$2</span>
+
+    <div class="glow-bg"></div>
+    <div class="grid-bg"></div>
+
+    <div id="authView" class="view active">
+        <div class="auth-container">
+            <div class="auth-box">
+                <div class="glass-panel rounded-3xl p-8">
+                    <div class="text-center mb-8">
+                        <h1 class="text-3xl font-bold mb-2">TrollMode</h1>
+                        <p class="text-gray-500">Премиум софт для Rage:MP</p>
+                    </div>
+
+                    <div class="flex justify-center mb-6 border-b border-white/10">
+                        <button class="tab-btn active" onclick="switchTab('login')" id="loginTab">Вход</button>
+                        <button class="tab-btn" onclick="switchTab('register')" id="registerTab">Регистрация</button>
+                    </div>
+
+                    <div id="messageBox" class="message">
+                        <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span id="messageText"></span>
+                    </div>
+
+                    <form id="loginForm" onsubmit="handleLogin(event)">
+                        <input type="email" class="auth-input" id="loginEmail" placeholder="Email" required>
+                        <input type="password" class="auth-input" id="loginPassword" placeholder="Пароль" required>
+                        <button type="submit" class="auth-btn" id="loginBtn">
+                            <span id="loginBtnText">Войти</span>
+                        </button>
+                    </form>
+
+                    <form id="registerForm" onsubmit="handleRegister(event)" style="display: none;">
+                        <input type="email" class="auth-input" id="registerEmail" placeholder="Email" required>
+                        <input type="password" class="auth-input" id="registerPassword" placeholder="Пароль (мин. 6 симв.)" minlength="6" required>
+                        <input type="password" class="auth-input" id="confirmPassword" placeholder="Повторите пароль" required>
+                        <button type="submit" class="auth-btn" id="registerBtn">
+                            <span id="registerBtnText">Создать аккаунт</span>
+                        </button>
+                    </form>
+
+                    <div class="mt-6 text-center text-xs text-gray-500">
+                        Triggerbot $3 | Визуалы +$2 | Клинер +$1
+                    </div>
                 </div>
-                <div class="extra-desc">Кости (скелет) и полоска здоровья через стены</div>
             </div>
         </div>
-        
-        <div class="extra-item" onclick="toggleExtra('autoclean', 1)">
-            <div class="extra-checkbox" id="check-autoclean"></div>
-            <div class="extra-info">
-                <div class="extra-title">
-                    Автоочистка
-                    <span class="extra-badge">+$1</span>
+    </div>
+
+    <div id="shopView" class="view">
+        <div class="relative z-10 max-w-6xl mx-auto p-6">
+            <div class="flex justify-between items-center mb-8">
+                <div class="flex items-center gap-3">
+                    <span class="text-2xl font-bold tracking-tight logo-text">TrollMode</span>
                 </div>
-                <div class="extra-desc">Полное удаление без возможности восстановления следов</div>
+
+                <div class="flex items-center gap-4">
+                    <div class="user-badge">
+                        <div class="text-sm" id="displayName">guest</div>
+                        <div class="w-px h-4 bg-gray-600"></div>
+                        <div class="logout-btn" onclick="logout()">Выйти</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid md:grid-cols-5 gap-6">
+                <div class="md:col-span-2 space-y-4">
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 class="text-2xl font-bold mb-2">Triggerbot RAGE:MP</h2>
+                                <div class="status-badge">
+                                    <span class="status-dot"></span>
+                                    <span>Undetected</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-bold gradient-text">$3</div>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-3 text-sm mb-6">
+                            <div class="flex justify-between py-2 border-b border-white/5">
+                                <span class="text-gray-500">Обновление</span>
+                                <span class="font-medium">01.01.2026</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-white/5">
+                                <span class="text-gray-500">Версия</span>
+                                <span class="font-medium">v2.1.0</span>
+                            </div>
+                            <div class="flex justify-between py-2 border-b border-white/5">
+                                <span class="text-gray-500">Статус</span>
+                                <span style="color: #22c55e; font-weight: 600;">Online</span>
+                            </div>
+                        </div>
+
+                        <div class="support-card glass-panel rounded-xl p-4 border border-pink-500/30 bg-pink-500/5" onclick="window.open('https://t.me/Voumy', '_blank')">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <div class="text-sm font-bold text-pink-400 mb-1">Поддержка</div>
+                                    <div class="text-xs text-gray-400">Нажми чтобы написать</div>
+                                </div>
+                                <svg class="w-6 h-6 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="md:col-span-3">
+                    <div class="glass-panel rounded-2xl p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-5">Дополнительные модули</h3>
+
+                        <div class="module-card mb-4" onclick="toggleModule('visuals')" id="visuals-card">
+                            <div class="flex items-start gap-4">
+                                <input type="checkbox" class="custom-checkbox" id="visuals-check" onchange="updateTotal()" onclick="event.stopPropagation()">
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h4 class="font-bold">Визуалы</h4>
+                                        </div>
+                                        <div class="price-tag">+$2</div>
+                                    </div>
+                                    
+                                    <div class="space-y-1 text-sm text-gray-400 mt-2">
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-pink-400">•</span>
+                                            <span>Скелет — отображение костей сквозь стены</span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="text-pink-400">•</span>
+                                            <span>Health Bar — полоска здоровья над врагом</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="module-card" onclick="toggleModule('cleaner')" id="cleaner-card">
+                            <div class="flex items-start gap-4">
+                                <input type="checkbox" class="custom-checkbox" id="cleaner-check" onchange="updateTotal()" onclick="event.stopPropagation()">
+                                <div class="flex-1">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div>
+                                            <h4 class="font-bold">Автоочистка</h4>
+                                        </div>
+                                        <div class="price-tag">+$1</div>
+                                    </div>
+                                    
+                                    <p class="text-sm text-gray-400 mt-2">
+                                        Очистка следов использования софта из системы.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-2xl p-6">
+                        <div class="flex justify-between items-end mb-6">
+                            <div>
+                                <div class="text-sm text-gray-500 mb-1">Итого</div>
+                                <div class="text-4xl font-bold gradient-text" id="total-price">$3</div>
+                            </div>
+                            <div class="text-right text-sm space-y-1 text-gray-400">
+                                <div>Base: $3</div>
+                                <div id="visuals-price" class="hidden text-pink-400">+ Визуалы: $2</div>
+                                <div id="cleaner-price" class="hidden text-pink-400">+ Клинер: $1</div>
+                            </div>
+                        </div>
+
+                        <button onclick="buyNow()" class="auth-btn mb-3">
+                            Купить
+                        </button>
+                        
+                        <button onclick="resetConfig()" class="w-full py-3 rounded-xl font-medium text-gray-400 hover:text-white border border-white/10 hover:bg-white/5 transition-all">
+                            Сбросить
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-    
-    <!-- Purchase Section с кнопкой -->
-    <div class="purchase-section">
-        <div class="total-line">
-            <span class="total-text">Итого к оплате</span>
-            <span class="total-amount" id="totalPrice">$3</span>
-        </div>
-        <button class="buy-btn" onclick="handlePurchase()">
-            <span>Купить</span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"></polyline>
-            </svg>
-        </button>
-    </div>
-    
+
     <script>
-        let state = {
-            basePrice: 3,
-            visuals: false,
-            autoclean: false
+        const firebaseConfig = {
+            apiKey: "AIzaSyBdNF-8BfgLFw3FnSV4Aqwe5lPN6dRH3vg",
+            authDomain: "trollmodegtav.firebaseapp.com",
+            projectId: "trollmodegtav",
+            storageBucket: "trollmodegtav.firebasestorage.app",
+            messagingSenderId: "846944898185",
+            appId: "1:846944898185:web:2f68108d78430756fe8a58",
+            measurementId: "G-F231G59FVB"
         };
-        
-        function updateTotal() {
-            let total = state.basePrice;
-            if (state.visuals) total += 2;
-            if (state.autoclean) total += 1;
-            document.getElementById('totalPrice').textContent = '$' + total;
-        }
-        
-        function toggleExtra(type, price) {
-            state[type] = !state[type];
-            const checkbox = document.getElementById('check-' + type);
-            const parent = checkbox.parentElement;
-            
-            if (state[type]) {
-                parent.classList.add('selected');
+
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                const email = user.email;
+                const username = email.split('@')[0];
+                document.getElementById('displayName').textContent = username;
+                
+                document.getElementById('authView').classList.remove('active');
+                document.getElementById('shopView').classList.add('active');
+                
+                document.getElementById('loginForm').reset();
+                document.getElementById('registerForm').reset();
             } else {
-                parent.classList.remove('selected');
+                document.getElementById('authView').classList.add('active');
+                document.getElementById('shopView').classList.remove('active');
+                document.getElementById('displayName').textContent = 'guest';
             }
-            updateTotal();
+        });
+
+        function getFriendlyError(errorCode) {
+            const errors = {
+                'auth/invalid-email': 'Неверный формат email адреса',
+                'auth/user-disabled': 'Аккаунт заблокирован',
+                'auth/user-not-found': 'Аккаунт с таким email не найден',
+                'auth/wrong-password': 'Неверный пароль',
+                'auth/email-already-in-use': 'Этот email уже зарегистрирован',
+                'auth/weak-password': 'Пароль слишком слабый (мин. 6 символов)',
+                'auth/invalid-credential': 'Неверный email или пароль',
+                'auth/too-many-requests': 'Слишком много попыток. Попробуйте позже',
+                'auth/network-request-failed': 'Нет подключения к интернету',
+                'auth/configuration-not-found': 'Метод входа не настроен',
+                'auth/operation-not-allowed': 'Регистрация временно отключена'
+            };
+            return errors[errorCode] || 'Ошибка авторизации';
         }
-        
-        function copyFallback(text) {
-            const textarea = document.createElement('textarea');
-            textarea.value = text;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
+
+        function showMessage(text, type = 'error') {
+            const box = document.getElementById('messageBox');
+            const textEl = document.getElementById('messageText');
+            
+            box.className = 'message message-' + type + ' show';
+            textEl.textContent = text;
+            
+            if (type === 'error') {
+                setTimeout(() => box.classList.remove('show'), 5000);
+            }
+        }
+
+        function hideMessage() {
+            document.getElementById('messageBox').classList.remove('show');
+        }
+
+        function setLoading(btnId, textId, loading) {
+            const btn = document.getElementById(btnId);
+            const text = document.getElementById(textId);
+            btn.disabled = loading;
+            text.innerHTML = loading ? '<span class="loading-spinner"></span> Загрузка...' : (btnId === 'loginBtn' ? 'Войти' : 'Создать аккаунт');
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            hideMessage();
+            
+            const email = document.getElementById('loginEmail').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            
+            setLoading('loginBtn', 'loginBtnText', true);
             
             try {
-                const success = document.execCommand('copy');
-                document.body.removeChild(textarea);
-                return success;
-            } catch (e) {
-                document.body.removeChild(textarea);
-                return false;
+                await auth.signInWithEmailAndPassword(email, password);
+            } catch (error) {
+                showMessage(getFriendlyError(error.code));
+                setLoading('loginBtn', 'loginBtnText', false);
             }
         }
-        
-        async function copyText(text) {
-            if (navigator.clipboard && window.isSecureContext) {
-                try {
-                    await navigator.clipboard.writeText(text);
-                    return true;
-                } catch (e) {
-                    return copyFallback(text);
-                }
-            } else {
-                return copyFallback(text);
+
+        async function handleRegister(e) {
+            e.preventDefault();
+            hideMessage();
+            
+            const email = document.getElementById('registerEmail').value.trim();
+            const password = document.getElementById('registerPassword').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            
+            if (password !== confirm) {
+                showMessage('Пароли не совпадают');
+                return;
+            }
+            
+            if (password.length < 6) {
+                showMessage('Пароль должен быть минимум 6 символов');
+                return;
+            }
+            
+            setLoading('registerBtn', 'registerBtnText', true);
+            
+            try {
+                await auth.createUserWithEmailAndPassword(email, password);
+                showMessage('Аккаунт создан!', 'success');
+            } catch (error) {
+                showMessage(getFriendlyError(error.code));
+                setLoading('registerBtn', 'registerBtnText', false);
             }
         }
-        
-        async function handlePurchase() {
-            let items = ['Триггербот'];
-            if (state.visuals) items.push('Визуалы');
-            if (state.autoclean) items.push('Автоочистка');
-            
-            const message = `Привет, хочу купить ${items.join(' + ')}`;
-            
-            await copyText(message);
-            
-            setTimeout(() => {
-                window.open('https://t.me/voumy', '_blank');
-            }, 300);
+
+        function logout() {
+            auth.signOut();
         }
+
+        function switchTab(tab) {
+            document.getElementById('loginTab').classList.toggle('active', tab === 'login');
+            document.getElementById('registerTab').classList.toggle('active', tab === 'register');
+            document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
+            document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+            hideMessage();
+        }
+
+        function toggleModule(module) {
+            const checkbox = document.getElementById(module + '-check');
+            checkbox.checked = !checkbox.checked;
+            updateTotal();
+        }
+
+        function updateTotal() {
+            let total = 3;
+            const visuals = document.getElementById('visuals-check').checked;
+            const cleaner = document.getElementById('cleaner-check').checked;
+            
+            if (visuals) total += 2;
+            if (cleaner) total += 1;
+            
+            document.getElementById('total-price').textContent = '$' + total;
+            document.getElementById('visuals-price').classList.toggle('hidden', !visuals);
+            document.getElementById('cleaner-price').classList.toggle('hidden', !cleaner);
+            document.getElementById('visuals-card').classList.toggle('active', visuals);
+            document.getElementById('cleaner-card').classList.toggle('active', cleaner);
+        }
+
+        function resetConfig() {
+            document.getElementById('visuals-check').checked = false;
+            document.getElementById('cleaner-check').checked = false;
+            updateTotal();
+        }
+
+        async function buyNow() {
+            const visuals = document.getElementById('visuals-check').checked;
+            const cleaner = document.getElementById('cleaner-check').checked;
+            
+            let text = "Привет, хочу купить Триггер";
+            
+            if (visuals) text += " + Визуалы";
+            if (cleaner) text += " + Клинер";
+            
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch (err) {
+                console.log('Clipboard failed');
+            }
+            
+            // Сразу открываем Telegram без задержки и без сообщения
+            window.location.href = 'https://t.me/Voumy';
+        }
+
+        document.getElementById('messageBox').addEventListener('click', hideMessage);
     </script>
 </body>
 </html>
+

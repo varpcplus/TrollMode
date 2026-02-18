@@ -1,2 +1,1 @@
-# TrollMode
-Best undetected TriggerBot
+
